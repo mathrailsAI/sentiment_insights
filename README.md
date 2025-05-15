@@ -1,12 +1,94 @@
-# SentimentInsights 💬📊
+# SentimentInsights
 
-**SentimentInsights** is a Ruby gem that helps you uncover meaningful insights from open-ended survey responses using Natural Language Processing (NLP). It supports multi-provider analysis via OpenAI, AWS Comprehend, or a local fallback engine.
+**SentimentInsights** is a Ruby gem for extracting sentiment, key phrases, and named entities from survey responses or free-form textual data. It offers a plug-and-play interface to different NLP providers, including OpenAI and AWS.
 
 ---
 
-## ✨ Features
+## Table of Contents
 
-### ✅ 1. Sentiment Analysis
+- [Installation](#installation)
+- [Configuration](#configuration)
+- [Usage](#usage)
+    - [Sentiment Analysis](#sentiment-analysis)
+    - [Key Phrase Extraction](#key-phrase-extraction)
+    - [Entity Extraction](#entity-extraction)
+- [Provider Options & Custom Prompts](#provider-options--custom-prompts)
+- [Full Example](#full-example)
+- [Contributing](#contributing)
+- [License](#license)
+
+---
+
+## Installation
+
+Add to your Gemfile:
+
+```ruby
+gem 'sentiment_insights'
+```
+
+Then install:
+
+```bash
+bundle install
+```
+
+Or install it directly:
+
+```bash
+gem install sentiment_insights
+```
+
+---
+
+## Configuration
+
+Configure the provider and (if using OpenAI or AWS) your API key:
+
+```ruby
+require 'sentiment_insights'
+
+# For OpenAI
+SentimentInsights.configure do |config|
+  config.provider = :openai
+  config.openai_api_key = ENV["OPENAI_API_KEY"]
+end
+
+# For AWS
+SentimentInsights.configure do |config|
+  config.provider = :aws
+  config.aws_region = 'us-east-1'
+end
+
+# For sentimental
+SentimentInsights.configure do |config|
+  config.provider = :sentimental
+end
+```
+
+Supported providers:
+- `:openai`
+- `:aws`
+- `:sentimental` (local fallback, limited feature set)
+
+---
+
+## Usage
+
+Data entries should be hashes with at least an `:answer` key. Optionally include segmentation info under `:segment`.
+
+```ruby
+entries = [
+  { answer: "Amazon Checkout was smooth!", segment: { age_group: "18-25", gender: "Female" } },
+  { answer: "Walmart Shipping was delayed.", segment: { age_group: "18-25", gender: "Female" } },
+  { answer: "Target Support was decent.", segment: { age_group: "26-35", gender: "Male" } },
+  { answer: "Loved the product!", segment: { age_group: "18-25", gender: "Male" } }
+]
+```
+
+---
+
+### Sentiment Analysis
 
 Quickly classify and summarize user responses as positive, neutral, or negative — globally or by segment (e.g., age, region).
 
@@ -16,6 +98,34 @@ Quickly classify and summarize user responses as positive, neutral, or negative 
 insight = SentimentInsights::Insights::Sentiment.new
 result = insight.analyze(entries)
 ```
+
+With options:
+
+```ruby
+custom_prompt = <<~PROMPT
+  For each of the following customer responses, classify the sentiment as Positive, Neutral, or Negative, and assign a score between -1.0 (very negative) and 1.0 (very positive).
+
+            Reply with a numbered list like:
+            1. Positive (0.9)
+            2. Negative (-0.8)
+            3. Neutral (0.0)
+PROMPT
+
+insight = SentimentInsights::Insights::Sentiment.new
+result = insight.analyze(
+  entries,
+  question: "How was your experience today?",
+  prompt: custom_prompt,
+  batch_size: 10
+)
+```
+
+#### Available Options (`analyze`)
+| Option        | Type    | Description                                                            | Provider    |
+|---------------|---------|------------------------------------------------------------------------|-------------|
+| `question`    | String  | Contextual question for the batch                                     | OpenAI only |
+| `prompt`      | String  | Custom prompt text for LLM                                            | OpenAI only |
+| `batch_size`  | Integer | Number of entries per OpenAI completion call (default: 50)           | OpenAI only |
 
 #### 📾 Sample Output
 
@@ -59,14 +169,55 @@ result = insight.analyze(entries)
         :sentiment_score=>0.9}]}}
 ```
 
-### ✅ 2. Key Phrase Extraction
+---
+
+### Key Phrase Extraction
 
 Extract frequently mentioned phrases and identify their associated sentiment and segment spread.
 
 ```ruby
 insight = SentimentInsights::Insights::KeyPhrases.new
-result = insight.extract(entries, question: question)
+result = insight.extract(entries)
 ```
+
+With options:
+
+```ruby
+key_phrase_prompt = <<~PROMPT.strip
+  Extract the most important key phrases that represent the main ideas or feedback in the sentence below.
+  Ignore stop words and return each key phrase in its natural form, comma-separated.
+
+  Question: %{question}
+
+  Text: %{text}
+PROMPT
+
+sentiment_prompt = <<~PROMPT
+  For each of the following customer responses, classify the sentiment as Positive, Neutral, or Negative, and assign a score between -1.0 (very negative) and 1.0 (very positive).
+
+            Reply with a numbered list like:
+            1. Positive (0.9)
+            2. Negative (-0.8)
+            3. Neutral (0.0)
+PROMPT
+
+insight = SentimentInsights::Insights::KeyPhrases.new
+result = insight.extract(
+  entries,
+  question: "What are the recurring themes?",
+  key_phrase_prompt: key_phrase_prompt,
+  sentiment_prompt: sentiment_prompt
+)
+```
+
+#### Available Options (`extract`)
+| Option             | Type    | Description                                                | Provider     |
+|--------------------|---------|------------------------------------------------------------|--------------|
+| `question`         | String  | Context question to help guide phrase extraction           | OpenAI only  |
+| `key_phrase_prompt`| String  | Custom prompt for extracting key phrases                   | OpenAI only  |
+| `sentiment_prompt` | String  | Custom prompt for classifying tone of extracted phrases    | OpenAI only  |
+
+#### 📾 Sample Output
 
 ```ruby
 {:phrases=>
@@ -85,14 +236,43 @@ result = insight.extract(entries, question: question)
      :segment=>{:age=>"25-34", :region=>"West"}}]}
 ```
 
-### ✅ 3. Entity Recognition
+---
 
-Identify named entities like organizations, products, and people, and track them by sentiment and segment.
+### Entity Extraction
 
 ```ruby
 insight = SentimentInsights::Insights::Entities.new
-result = insight.extract(entries, question: question)
+result = insight.extract(entries)
 ```
+
+With options:
+
+```ruby
+entity_prompt = <<~PROMPT.strip
+  Identify brand names, competitors, and product references in the sentence below.
+  Return each as a JSON object with "text" and "type" (e.g., BRAND, PRODUCT, COMPANY).
+
+  Question: %{question}
+
+  Sentence: "%{text}"
+PROMPT
+
+insight = SentimentInsights::Insights::Entities.new
+result = insight.extract(
+  entries,
+  question: "Which products or brands are mentioned?",
+  prompt: entity_prompt
+)
+
+```
+
+#### Available Options (`extract`)
+| Option      | Type    | Description                                       | Provider     |
+|-------------|---------|---------------------------------------------------|--------------|
+| `question`  | String  | Context question to guide entity extraction       | OpenAI only  |
+| `prompt`    | String  | Custom instructions for OpenAI entity extraction  | OpenAI only  |
+
+#### 📾 Sample Output
 
 ```ruby
 {:entities=>
@@ -126,73 +306,12 @@ result = insight.extract(entries, question: question)
          "the response was copy-paste and didn't address my issue directly.",
      :segment=>{:age=>"45-54", :region=>"Midwest"}}]}
 ```
-
-### ✅ 4. Topic Modeling *(Coming Soon)*
-
-Automatically group similar responses into topics and subthemes.
-
 ---
 
-## 🔌 Supported Providers
+## Provider Options & Custom Prompts
 
-| Feature            | OpenAI ✅       | AWS Comprehend ✅ | Sentimental (Local) ⚠️ |
-| ------------------ | -------------- | ---------------- | ---------------------- |
-| Sentiment Analysis | ✅              | ✅                | ✅                      |
-| Key Phrases        | ✅              | ✅                | ❌ Not supported        |
-| Entities           | ✅              | ✅                | ❌ Not supported        |
-| Topics             | 🔜 Coming Soon | 🔜 Coming Soon   | ❌                      |
-
-Legend: ✅ Supported | 🔜 Coming Soon | ❌ Not Available | ⚠️ Partial
-
----
-
-## 📅 Example Input
-
-```ruby
-question = "What did you like or dislike about your recent shopping experience with us?"
-
-entries = [
-  {
-    answer: "I absolutely loved the experience shopping with Everlane. The website is clean,\nproduct descriptions are spot-on, and my jeans arrived two days early with eco-friendly packaging.",
-    segment: { age: "25-34", region: "West" }
-  },
-  {
-    answer: "The checkout flow on your site was a nightmare. The promo code from your Instagram campaign didn’t work,\nand it kept redirecting me to the homepage. Shopify integration needs a serious fix.",
-    segment: { age: "35-44", region: "South" }
-  },
-  {
-    answer: "Apple Pay made the mobile checkout super fast. I placed an order while waiting for my coffee at Starbucks.\nGreat job optimizing the app UX—this is a game-changer.",
-    segment: { age: "25-34", region: "West" }
-  },
-  {
-    answer: "I reached out to your Zendesk support team about a missing package, and while they responded within 24 hours,\nthe response was copy-paste and didn't address my issue directly.",
-    segment: { age: "45-54", region: "Midwest" }
-  },
-  {
-    answer: "Shipping delays aside, I really liked the personalized note inside the box. Small gestures like that\nmake the Uniqlo brand stand out. Will definitely recommend to friends.",
-    segment: { age: "25-34", region: "West" }
-  }
-]
-```
-
----
-
-## 🚀 Quick Start
-
-```ruby
-# Install the gem
-$ gem install sentiment_insights
-
-# Configure the provider
-SentimentInsights.configure do |config|
-  config.provider = :openai  # or :aws, :sentimental
-end
-
-# Run analysis
-insight = SentimentInsights::Insights::Sentiment.new
-result = insight.analyze(entries)
-puts JSON.pretty_generate(result)
-```
+> ⚠️ All advanced options (`question`, `prompt`, `key_phrase_prompt`, `sentiment_prompt`, `batch_size`) apply only to the `:openai` provider.  
+> They are safely ignored for `:aws` and `:sentimental`.
 
 ---
 
@@ -217,7 +336,6 @@ AWS_REGION=us-east-1
 ## 💎 Ruby Compatibility
 
 - **Minimum Ruby version:** 2.7
-- Tested on: 2.7, 3.0, 3.1, 3.2
 
 ---
 
@@ -258,8 +376,3 @@ Pull requests welcome! Please open an issue to discuss major changes first.
 - [AWS Comprehend](https://docs.aws.amazon.com/comprehend/latest/dg/what-is.html)
 - [Sentimental Gem](https://github.com/7compass/sentimental)
 
----
-
-## 📢 Questions?
-
-File an issue or reach out on [GitHub](https://github.com/your-repo)

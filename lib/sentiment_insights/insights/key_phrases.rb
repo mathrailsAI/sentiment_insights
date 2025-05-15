@@ -24,9 +24,9 @@ module SentimentInsights
       # @param entries [Array<Hash>] each with :answer and optional :segment
       # @param question [String, nil] optional context
       # @return [Hash] { phrases: [...], responses: [...] }
-      def extract(entries, question: nil)
+      def extract(entries, question: nil, key_phrase_prompt: nil, sentiment_prompt: nil)
         entries = entries.to_a
-        raw_result = @provider_client.extract_batch(entries, question: question)
+        raw_result = @provider_client.extract_batch(entries, question: question, key_phrase_prompt: key_phrase_prompt, sentiment_prompt: sentiment_prompt)
 
         responses = raw_result[:responses] || []
         phrases  = raw_result[:phrases] || []

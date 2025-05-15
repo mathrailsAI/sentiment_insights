@@ -15,7 +15,7 @@ module SentimentInsights
         # Analyze a batch of entries using AWS Comprehend.
         # @param entries [Array<Hash>] each with :answer key
         # @return [Array<Hash>] each with :label (symbol) and :score (float)
-        def analyze_entries(entries, question: nil)
+        def analyze_entries(entries, question: nil, prompt: nil, batch_size: nil)
           results = []
 
           entries.each_slice(MAX_BATCH_SIZE) do |batch|

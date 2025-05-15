@@ -8,7 +8,7 @@ module SentimentInsights
   module Clients
     module KeyPhrases
       class OpenAIClient
-        DEFAULT_MODEL   = "gpt-3.5-turbo"
+        DEFAULT_MODEL = "gpt-3.5-turbo"
         DEFAULT_RETRIES = 3
 
         def initialize(api_key: ENV['OPENAI_API_KEY'], model: DEFAULT_MODEL, max_retries: DEFAULT_RETRIES)
@@ -20,19 +20,19 @@ module SentimentInsights
         end
 
         # Extract key phrases from entries and enrich with sentiment
-        def extract_batch(entries, question: nil)
+        def extract_batch(entries, question: nil, key_phrase_prompt: nil, sentiment_prompt: nil)
           responses = []
           phrase_map = Hash.new { |h, k| h[k] = [] }
 
           # Fetch sentiments in batch from sentiment client
-          sentiments = @sentiment_client.analyze_entries(entries, question: question)
+          sentiments = @sentiment_client.analyze_entries(entries, question: question, prompt: sentiment_prompt)
 
           entries.each_with_index do |entry, index|
             sentence = entry[:answer].to_s.strip
             next if sentence.empty?
 
             response_id = "r_#{index + 1}"
-            phrases = extract_phrases_from_sentence(sentence)
+            phrases = extract_phrases_from_sentence(sentence, question: question, prompt: key_phrase_prompt)
 
             sentiment = sentiments[index] || { label: :neutral }
 
@@ -61,15 +61,33 @@ module SentimentInsights
 
         private
 
-        def extract_phrases_from_sentence(text)
-          prompt = <<~PROMPT
-          Extract the key phrases from this sentence:
-          "#{text}"
-          Return them as a comma-separated list.
+        def extract_phrases_from_sentence(text, question: nil, prompt: nil)
+          # Default prompt with interpolation placeholders
+          default_prompt = <<~PROMPT
+            Extract the most important key phrases that represent the main ideas or feedback in the sentence below.
+            Ignore stop words and return each key phrase in its natural form, comma-separated.
+            %{question}
+            Sentence: "%{text}"
           PROMPT
 
-          body = build_request_body(prompt)
+          # If a custom prompt is provided, attempt to interpolate %{text} and %{question} if present
+          if prompt
+            interpolated = prompt.dup
+            interpolated.gsub!('%{text}', text.to_s)
+            interpolated.gsub!('%{question}', question.to_s) if question
+            # For compatibility: if “{text}” is used instead of “%{text}”
+            interpolated.gsub!('{text}', text.to_s)
+            interpolated.gsub!('{question}', question.to_s) if question
+            prompt_to_use = interpolated
+          else
+            question_line = question ? "Question: #{question}" : ""
+            prompt_to_use = default_prompt % { question: question_line, text: text }
+          end
+
+          body = build_request_body(prompt_to_use)
           response = post_openai(body)
+
+          # The response is expected as a comma- or newline-separated list of key phrases
           parse_phrases(response)
         end
 

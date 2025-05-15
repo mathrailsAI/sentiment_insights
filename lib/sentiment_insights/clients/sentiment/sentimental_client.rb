@@ -14,7 +14,7 @@ module SentimentInsights
         # @param entries [Array<Hash>] An array of response hashes (each with :answer).
         # @param question [String, nil] (unused) Global question context, not needed for local analysis.
         # @return [Array<Hash>] An array of hashes with sentiment classification and score for each entry.
-        def analyze_entries(entries, question: nil)
+        def analyze_entries(entries, question: nil, prompt: nil, batch_size: nil)
           puts "Inside sentimental"
           entries.map do |entry|
             text = entry[:answer].to_s.strip

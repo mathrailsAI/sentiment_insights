@@ -17,7 +17,7 @@ module SentimentInsights
           @logger = Logger.new($stdout)
         end
 
-        def extract_batch(entries, question: nil)
+        def extract_batch(entries, question: nil, prompt: nil)
           responses = []
           entity_map = Hash.new { |h, k| h[k] = [] }
 
@@ -26,7 +26,7 @@ module SentimentInsights
             next if sentence.empty?
 
             response_id = "r_#{index + 1}"
-            entities = extract_entities_from_sentence(sentence)
+            entities = extract_entities_from_sentence(sentence, question: question, prompt: prompt)
 
             responses << {
               id: response_id,
@@ -35,6 +35,7 @@ module SentimentInsights
             }
 
             entities.each do |ent|
+              next if ent[:text].empty? || ent[:type].empty?
               key = [ent[:text].downcase, ent[:type]]
               entity_map[key] << response_id
             end
@@ -54,13 +55,29 @@ module SentimentInsights
 
         private
 
-        def extract_entities_from_sentence(text)
-          prompt = <<~PROMPT
-            Extract named entities from this sentence. Return them as a JSON array with each item having "text" and "type" (e.g., PERSON, ORGANIZATION, LOCATION, PRODUCT).
-            Sentence: "#{text}"
+        def extract_entities_from_sentence(text, question: nil, prompt: nil)
+          # Default prompt with interpolation placeholders
+          default_prompt = <<~PROMPT
+            Extract named entities from this sentence based on the question.
+            Return them as a JSON array with each item having "text" and "type" (e.g., PERSON, ORGANIZATION, LOCATION, PRODUCT).
+            %{question}
+            Sentence: "%{text}"
           PROMPT
 
-          body = build_request_body(prompt)
+          # If a custom prompt is provided, interpolate %{text} and %{question} if present
+          if prompt
+            interpolated = prompt.dup
+            interpolated.gsub!('%{text}', text.to_s)
+            interpolated.gsub!('%{question}', question.to_s) if question
+            interpolated.gsub!('{text}', text.to_s)
+            interpolated.gsub!('{question}', question.to_s) if question
+            prompt_to_use = interpolated
+          else
+            question_line = question ? "Question: #{question}" : ""
+            prompt_to_use = default_prompt % { question: question_line, text: text }
+          end
+
+          body = build_request_body(prompt_to_use)
           response = post_openai(body)
 
           begin

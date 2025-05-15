@@ -133,7 +133,7 @@ RSpec.describe SentimentInsights::Insights::Entities do
   context 'with mocked OpenAI provider' do
     let(:mock_client) do
       double('mock_openai_client').tap do |client|
-        allow(client).to receive(:extract_batch) do |entries, question: nil|
+        allow(client).to receive(:extract_batch) do |entries, question: nil, prompt: nil|
           {
             responses: [
               {
@@ -232,7 +232,7 @@ RSpec.describe SentimentInsights::Insights::Entities do
         allow_any_instance_of(described_class).to receive(:puts)
 
         # Modify the mock to have an entity appearing in multiple responses
-        allow(mock_client).to receive(:extract_batch) do |entries, question: nil|
+        allow(mock_client).to receive(:extract_batch) do |entries, question: nil, prompt: nil|
           {
             responses: [
               {
@@ -286,7 +286,7 @@ RSpec.describe SentimentInsights::Insights::Entities do
   context 'with mocked AWS provider' do
     let(:mock_client) do
       double('mock_aws_client').tap do |client|
-        allow(client).to receive(:extract_batch) do |entries, question: nil|
+        allow(client).to receive(:extract_batch) do |entries, question: nil, prompt: nil|
           {
             responses: [
               {
@@ -353,7 +353,7 @@ RSpec.describe SentimentInsights::Insights::Entities do
 
     let(:mock_client) do
       double('mock_client').tap do |client|
-        allow(client).to receive(:extract_batch) do |entries, question: nil|
+        allow(client).to receive(:extract_batch) do |entries, question: nil, prompt: nil|
           {
             responses: [
               {
@@ -405,7 +405,7 @@ RSpec.describe SentimentInsights::Insights::Entities do
   context 'with provider returning incomplete data' do
     let(:mock_client_with_incomplete_data) do
       double('mock_client_incomplete').tap do |client|
-        allow(client).to receive(:extract_batch) do |entries, question: nil|
+        allow(client).to receive(:extract_batch) do |entries, question: nil, prompt: nil|
           {
             # Missing responses but has entities
             entities: [
@@ -442,7 +442,7 @@ RSpec.describe SentimentInsights::Insights::Entities do
   context 'with provider returning null mention ids' do
     let(:mock_client_with_null_mentions) do
       double('mock_client_null_mentions').tap do |client|
-        allow(client).to receive(:extract_batch) do |entries, question: nil|
+        allow(client).to receive(:extract_batch) do |entries, question: nil, prompt: nil|
           {
             responses: [
               {
@@ -481,7 +481,7 @@ RSpec.describe SentimentInsights::Insights::Entities do
   context 'with invalid response IDs in mentions' do
     let(:mock_client_with_invalid_ids) do
       double('mock_client_invalid_ids').tap do |client|
-        allow(client).to receive(:extract_batch) do |entries, question: nil|
+        allow(client).to receive(:extract_batch) do |entries, question: nil, prompt: nil|
           {
             responses: [
               {
@@ -522,7 +522,7 @@ RSpec.describe SentimentInsights::Insights::Entities do
   context 'with entities having empty fields' do
     let(:mock_client_with_empty_fields) do
       double('mock_client_empty_fields').tap do |client|
-        allow(client).to receive(:extract_batch) do |entries, question: nil|
+        allow(client).to receive(:extract_batch) do |entries, question: nil, prompt: nil|
           {
             responses: [
               {

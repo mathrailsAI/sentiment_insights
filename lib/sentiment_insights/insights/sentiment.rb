@@ -1,5 +1,6 @@
 require_relative '../clients/sentiment/open_ai_client'
 require_relative '../clients/sentiment/sentimental_client'
+require_relative '../clients/sentiment/aws_comprehend_client'
 
 module SentimentInsights
   module Insights
@@ -15,7 +16,6 @@ module SentimentInsights
                                               when :openai
                                                 Clients::Sentiment::OpenAIClient.new
                                               when :aws
-                                                require_relative '../clients/sentiment/aws_comprehend_client'
                                                 Clients::Sentiment::AwsComprehendClient.new
                                               else
                                                 Clients::Sentiment::SentimentalClient.new
@@ -27,11 +27,11 @@ module SentimentInsights
       # @param entries [Array<Hash>] An array of response hashes, each with :answer and :segment.
       # @param question [String, nil] Optional global question text or metadata for context.
       # @return [Hash] Summary of sentiment analysis (global, segment-wise, top comments, and annotated responses).
-      def analyze(entries, question: nil)
+      def analyze(entries, question: nil, prompt: nil, batch_size: 50)
         # Ensure entries is an array of hashes with required keys
         entries = entries.to_a
         # Get sentiment results for each entry from the provider client
-        results = @provider_client.analyze_entries(entries, question: question)
+        results = @provider_client.analyze_entries(entries, question: question, prompt: prompt, batch_size: batch_size)
 
         # Combine original entries with sentiment results
         annotated_responses = entries.each_with_index.map do |entry, idx|
