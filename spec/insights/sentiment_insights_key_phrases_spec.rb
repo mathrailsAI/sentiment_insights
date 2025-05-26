@@ -119,7 +119,7 @@ RSpec.describe SentimentInsights::Insights::KeyPhrases do
   context 'with mocked OpenAI provider' do
     let(:mock_client) do
       double('mock_openai_client').tap do |client|
-        allow(client).to receive(:extract_batch) do |entries, question: nil|
+        allow(client).to receive(:extract_batch) do |entries, question: nil, key_phrase_prompt: nil, sentiment_prompt: nil|
           {
             responses: [
               {
@@ -199,7 +199,7 @@ RSpec.describe SentimentInsights::Insights::KeyPhrases do
   context 'with mocked AWS provider' do
     let(:mock_client) do
       double('mock_aws_client').tap do |client|
-        allow(client).to receive(:extract_batch) do |entries, question: nil|
+        allow(client).to receive(:extract_batch) do |entries, question: nil, key_phrase_prompt: nil, sentiment_prompt: nil|
           {
             responses: [
               {
@@ -256,7 +256,7 @@ RSpec.describe SentimentInsights::Insights::KeyPhrases do
     
     let(:mock_client) do
       double('mock_client').tap do |client|
-        allow(client).to receive(:extract_batch) do |entries, question: nil|
+        allow(client).to receive(:extract_batch) do |entries, question: nil, key_phrase_prompt: nil, sentiment_prompt: nil|
           {
             responses: [
               {
@@ -302,7 +302,7 @@ RSpec.describe SentimentInsights::Insights::KeyPhrases do
   context 'with provider returning incomplete data' do
     let(:mock_client_with_incomplete_data) do
       double('mock_client_incomplete').tap do |client|
-        allow(client).to receive(:extract_batch) do |entries, question: nil|
+        allow(client).to receive(:extract_batch) do |entries, question: nil, key_phrase_prompt: nil, sentiment_prompt: nil|
           {
             # Missing responses but has phrases
             phrases: [
@@ -335,7 +335,7 @@ RSpec.describe SentimentInsights::Insights::KeyPhrases do
   context 'with provider returning null mention ids' do
     let(:mock_client_with_null_mentions) do
       double('mock_client_null_mentions').tap do |client|
-        allow(client).to receive(:extract_batch) do |entries, question: nil|
+        allow(client).to receive(:extract_batch) do |entries, question: nil, key_phrase_prompt: nil, sentiment_prompt: nil|
           {
             responses: [
               {
@@ -370,7 +370,7 @@ RSpec.describe SentimentInsights::Insights::KeyPhrases do
   context 'with responses having no sentiment' do
     let(:mock_client_no_sentiment) do
       double('mock_client_no_sentiment').tap do |client|
-        allow(client).to receive(:extract_batch) do |entries, question: nil|
+        allow(client).to receive(:extract_batch) do |entries, question: nil, key_phrase_prompt: nil, sentiment_prompt: nil|
           {
             responses: [
               {

@@ -12,7 +12,7 @@ module SentimentInsights
           @logger = Logger.new($stdout)
         end
 
-        def extract_batch(entries, question: nil)
+        def extract_batch(entries, question: nil, key_phrase_prompt: nil, sentiment_prompt: nil)
           responses = []
           phrase_map = Hash.new { |h, k| h[k] = [] }
 

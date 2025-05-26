@@ -7,7 +7,7 @@ module SentimentInsights
   module Clients
     module Sentiment
       class OpenAIClient
-        DEFAULT_MODEL   = "gpt-3.5-turbo"
+        DEFAULT_MODEL = "gpt-3.5-turbo"
         DEFAULT_RETRIES = 3
 
         def initialize(api_key: ENV['OPENAI_API_KEY'], model: DEFAULT_MODEL, max_retries: DEFAULT_RETRIES, return_scores: true)
@@ -18,75 +18,85 @@ module SentimentInsights
           @logger = Logger.new($stdout)
         end
 
-        def analyze_entries(entries, question: nil)
-          prompt_content = build_prompt_content(entries, question)
-          request_body = {
-            model: @model,
-            messages: [
-              { role: "user", content: prompt_content }
-            ],
-            temperature: 0.0
-          }
+        def analyze_entries(entries, question: nil, prompt: nil, batch_size: 50)
+          all_sentiments = []
 
-          uri = URI("https://api.openai.com/v1/chat/completions")
-          http = Net::HTTP.new(uri.host, uri.port)
-          http.use_ssl = true
+          entries.each_slice(batch_size) do |batch|
+            prompt_content = build_prompt_content(batch, question: question, prompt: prompt)
+            request_body = {
+              model: @model,
+              messages: [
+                { role: "user", content: prompt_content }
+              ],
+              temperature: 0.0
+            }
 
-          response_content = nil
-          attempt = 0
+            uri = URI("https://api.openai.com/v1/chat/completions")
+            http = Net::HTTP.new(uri.host, uri.port)
+            http.use_ssl = true
 
-          while attempt < @max_retries
-            attempt += 1
-            request = Net::HTTP::Post.new(uri)
-            request["Content-Type"] = "application/json"
-            request["Authorization"] = "Bearer #{@api_key}"
-            request.body = JSON.generate(request_body)
+            response_content = nil
+            attempt = 0
 
-            begin
-              response = http.request(request)
-            rescue StandardError => e
-              @logger.error "OpenAI API request error: #{e.class} - #{e.message}"
-              raise
+            while attempt < @max_retries
+              attempt += 1
+              request = Net::HTTP::Post.new(uri)
+              request["Content-Type"] = "application/json"
+              request["Authorization"] = "Bearer #{@api_key}"
+              request.body = JSON.generate(request_body)
+
+              begin
+                response = http.request(request)
+              rescue StandardError => e
+                @logger.error "OpenAI API request error: #{e.class} - #{e.message}"
+                raise
+              end
+
+              status = response.code.to_i
+              if status == 429
+                @logger.warn "Rate limit (HTTP 429) on attempt #{attempt}. Retrying..."
+                sleep(2 ** (attempt - 1))
+                next
+              elsif status != 200
+                @logger.error "Request failed (#{status}): #{response.body}"
+                raise "OpenAI API Error: #{status}"
+              else
+                data = JSON.parse(response.body)
+                response_content = data.dig("choices", 0, "message", "content")
+                break
+              end
             end
 
-            status = response.code.to_i
-            if status == 429
-              @logger.warn "Rate limit (HTTP 429) on attempt #{attempt}. Retrying..."
-              sleep(2 ** (attempt - 1))
-              next
-            elsif status != 200
-              @logger.error "Request failed (#{status}): #{response.body}"
-              raise "OpenAI API Error: #{status}"
-            else
-              data = JSON.parse(response.body)
-              response_content = data.dig("choices", 0, "message", "content")
-              break
-            end
+            sentiments = parse_sentiments(response_content, batch.size)
+            all_sentiments.concat(sentiments)
           end
 
-          parse_sentiments(response_content, entries.size)
+          all_sentiments
         end
 
         private
 
-        def build_prompt_content(entries, question)
-          prompt = ""
-          prompt << "Question: #{question}\n" if question
-          prompt << <<~INSTRUCTIONS
-          For each of the following customer responses, classify the sentiment as Positive, Neutral, or Negative, and assign a score between -1.0 (very negative) and 1.0 (very positive).
+        def build_prompt_content(entries, question: nil, prompt: nil)
+          content = ""
+          content << "Question: #{question}\n\n" if question
 
-          Reply with a numbered list like:
-          1. Positive (0.9)
-          2. Negative (-0.8)
-          3. Neutral (0.0)
+          # Use custom instructions or default
+          instructions = prompt || <<~DEFAULT
+            For each of the following customer responses, classify the sentiment as Positive, Neutral, or Negative, and assign a score between -1.0 (very negative) and 1.0 (very positive).
 
-          INSTRUCTIONS
+            Reply with a numbered list like:
+            1. Positive (0.9)
+            2. Negative (-0.8)
+            3. Neutral (0.0)
+          DEFAULT
+
+          content << instructions.strip + "\n\n"
 
           entries.each_with_index do |entry, index|
-            prompt << "#{index + 1}. \"#{entry[:answer]}\"\n"
+            content << "#{index + 1}. \"#{entry[:answer]}\"\n"
           end
 
-          prompt
+          content
         end
 
         def parse_sentiments(content, expected_count)

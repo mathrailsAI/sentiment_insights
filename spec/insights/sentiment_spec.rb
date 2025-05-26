@@ -136,7 +136,7 @@ RSpec.describe SentimentInsights::Insights::Sentiment do
   context 'with mocked OpenAI provider' do
     let(:mock_client) do
       double('mock_openai_client').tap do |client|
-        allow(client).to receive(:analyze_entries) do |entries, question: nil|
+        allow(client).to receive(:analyze_entries) do |entries, question: nil, prompt: nil, batch_size: nil|
           entries.map.with_index do |_, i|
             { label: [:positive, :negative, :neutral][i % 3], score: [0.9, -0.8, 0.1][i % 3] }
           end
@@ -215,7 +215,7 @@ RSpec.describe SentimentInsights::Insights::Sentiment do
         ]
 
         custom_mock_client = double('custom_mock_client')
-        allow(custom_mock_client).to receive(:analyze_entries) do |entries, question: nil|
+        allow(custom_mock_client).to receive(:analyze_entries) do |entries, question: nil, prompt: nil, batch_size: nil|
           entries.map.with_index do |_, i|
             sentiment_type = i % 3 == 0 ? :positive : (i % 3 == 1 ? :negative : :neutral)
             score = sentiment_type == :positive ? 0.9 - (i * 0.1) :
@@ -243,7 +243,7 @@ RSpec.describe SentimentInsights::Insights::Sentiment do
   context 'with mocked AWS provider' do
     let(:mock_client) do
       double('mock_aws_client').tap do |client|
-        allow(client).to receive(:analyze_entries) do |entries, question: nil|
+        allow(client).to receive(:analyze_entries) do |entries, question: nil, prompt: nil, batch_size: nil|
           entries.map { { label: :positive, score: 0.9 } }
         end
       end
@@ -303,7 +303,7 @@ RSpec.describe SentimentInsights::Insights::Sentiment do
 
     let(:mock_client) do
       double('mock_client').tap do |client|
-        allow(client).to receive(:analyze_entries) do |entries, question: nil|
+        allow(client).to receive(:analyze_entries) do |entries, question: nil, prompt: nil, batch_size: nil|
           entries.map.with_index do |_, i|
             { label: i == 0 ? :positive : :negative, score: i == 0 ? 0.9 : -0.8 }
           end
@@ -329,7 +329,7 @@ RSpec.describe SentimentInsights::Insights::Sentiment do
   context 'with missing provider results' do
     let(:mock_client_with_missing_results) do
       double('mock_client_missing_results').tap do |client|
-        allow(client).to receive(:analyze_entries) do |entries, question: nil|
+        allow(client).to receive(:analyze_entries) do |entries, question: nil, prompt: nil, batch_size: nil|
           # Return fewer results than entries
           [{ label: :positive, score: 0.9 }]
         end

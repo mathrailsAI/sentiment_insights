@@ -22,11 +22,10 @@ module SentimentInsights
       # Extract named entities and build summarized output
       # @param entries [Array<Hash>] each with :answer and optional :segment
       # @return [Hash] { entities: [...], responses: [...] }
-      def extract(entries, question: nil)
+      def extract(entries, question: nil, prompt: nil)
         entries = entries.to_a
-        raw_result = @provider_client.extract_batch(entries, question: question)
+        raw_result = @provider_client.extract_batch(entries, question: question, prompt: prompt)
 
-        puts "raw_result = #{raw_result}"
         responses = raw_result[:responses] || []
         entities  = raw_result[:entities] || []
 

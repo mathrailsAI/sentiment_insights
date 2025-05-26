@@ -17,8 +17,6 @@ Gem::Specification.new do |spec|
   if spec.respond_to?(:metadata)
     spec.metadata["homepage_uri"] = spec.homepage
     spec.metadata["source_code_uri"] = "https://github.com/mathrailsAI/sentiment_insights"
-    spec.metadata["changelog_uri"] = "https://github.com/mathrailsAI/sentiment_insights/blob/main/CHANGELOG.md"
-    # Removed allowed_push_host — usually not needed unless you have a private server
   else
     raise "RubyGems 2.0 or newer is required to protect against public gem pushes."
   end
@@ -32,7 +30,7 @@ Gem::Specification.new do |spec|
 
   # Runtime dependencies
   spec.add_dependency "sentimental", "~> 1.4.0"
-  spec.add_dependency "aws-sdk-comprehend"
+  spec.add_dependency "aws-sdk-comprehend", ">= 1.98.0"
 
   # Development dependencies
   spec.add_development_dependency "bundler", "~> 2.0"
