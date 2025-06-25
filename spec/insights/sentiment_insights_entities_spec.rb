@@ -63,6 +63,7 @@ RSpec.describe SentimentInsights::Insights::Entities do
         module Clients
           module Entities
             class OpenAIClient; end
+            class ClaudeClient; end
             class AwsClient; end
           end
         end
@@ -105,12 +106,18 @@ RSpec.describe SentimentInsights::Insights::Entities do
 
         # Stub client creations
         allow(SentimentInsights::Clients::Entities::OpenAIClient).to receive(:new).and_return(double('openai_client'))
+        allow(SentimentInsights::Clients::Entities::ClaudeClient).to receive(:new).and_return(double('claude_client'))
         allow(SentimentInsights::Clients::Entities::AwsClient).to receive(:new).and_return(double('aws_client'))
       end
 
       it 'creates instance with OpenAI client' do
         expect(SentimentInsights::Clients::Entities::OpenAIClient).to receive(:new)
         described_class.new(provider: :openai)
+      end
+
+      it 'creates instance with Claude client' do
+        expect(SentimentInsights::Clients::Entities::ClaudeClient).to receive(:new)
+        described_class.new(provider: :claude)
       end
 
       it 'creates instance with AWS client' do
@@ -280,6 +287,70 @@ RSpec.describe SentimentInsights::Insights::Entities do
         expect(segment_dist[:region]["East"]).to eq(1)
         expect(segment_dist[:region]["Central"]).to eq(1)
       end
+    end
+  end
+
+  context 'with mocked Claude provider' do
+    let(:mock_client) do
+      double('mock_claude_client').tap do |client|
+        allow(client).to receive(:extract_batch) do |entries, question: nil, prompt: nil|
+          {
+            responses: [
+              {
+                id: "r_1",
+                sentence: entries[0][:answer],
+                segment: entries[0][:segment]
+              },
+              {
+                id: "r_2", 
+                sentence: entries[1][:answer],
+                segment: entries[1][:segment]
+              }
+            ],
+            entities: [
+              {
+                entity: "Apple",
+                type: "ORGANIZATION",
+                mentions: ["r_1"]
+              },
+              {
+                entity: "iPhone",
+                type: "PRODUCT",
+                mentions: ["r_1"]
+              },
+              {
+                entity: "Microsoft Teams",
+                type: "SOFTWARE",
+                mentions: ["r_2"]
+              }
+            ]
+          }
+        end
+      end
+    end
+
+    subject { described_class.new(provider_client: mock_client) }
+    
+    before do
+      allow_any_instance_of(described_class).to receive(:puts)
+    end
+    
+    include_examples "valid entity extraction"
+
+    it 'passes custom options to Claude client' do
+      custom_question = "What brands were mentioned?"
+      custom_prompt = "Extract only brand names and products"
+
+      expect(mock_client).to receive(:extract_batch).with(
+        entries,
+        question: custom_question,
+        prompt: custom_prompt
+      ).and_return({
+        responses: [],
+        entities: []
+      })
+
+      subject.extract(entries, question: custom_question, prompt: custom_prompt)
     end
   end
 

@@ -1,6 +1,6 @@
 # SentimentInsights
 
-**SentimentInsights** is a Ruby gem for extracting sentiment, key phrases, and named entities from survey responses or free-form textual data. It offers a plug-and-play interface to different NLP providers, including OpenAI and AWS.
+**SentimentInsights** is a Ruby gem for extracting sentiment, key phrases, and named entities from survey responses or free-form textual data. It offers a plug-and-play interface to different NLP providers, including OpenAI, Claude AI, and AWS.
 
 ---
 
@@ -43,7 +43,7 @@ gem install sentiment_insights
 
 ## Configuration
 
-Configure the provider and (if using OpenAI or AWS) your API key:
+Configure the provider and (if using OpenAI, Claude AI, or AWS) your API key:
 
 ```ruby
 require 'sentiment_insights'
@@ -52,6 +52,12 @@ require 'sentiment_insights'
 SentimentInsights.configure do |config|
   config.provider = :openai
   config.openai_api_key = ENV["OPENAI_API_KEY"]
+end
+
+# For Claude AI
+SentimentInsights.configure do |config|
+  config.provider = :claude
+  config.claude_api_key = ENV["CLAUDE_API_KEY"]
 end
 
 # For AWS
@@ -68,6 +74,7 @@ end
 
 Supported providers:
 - `:openai`
+- `:claude`
 - `:aws`
 - `:sentimental` (local fallback, limited feature set)
 
@@ -121,11 +128,11 @@ result = insight.analyze(
 ```
 
 #### Available Options (`analyze`)
-| Option        | Type    | Description                                                            | Provider    |
-|---------------|---------|------------------------------------------------------------------------|-------------|
-| `question`    | String  | Contextual question for the batch                                     | OpenAI only |
-| `prompt`      | String  | Custom prompt text for LLM                                            | OpenAI only |
-| `batch_size`  | Integer | Number of entries per OpenAI completion call (default: 50)           | OpenAI only |
+| Option        | Type    | Description                                                            | Provider           |
+|---------------|---------|------------------------------------------------------------------------|--------------------|
+| `question`    | String  | Contextual question for the batch                                     | OpenAI, Claude only |
+| `prompt`      | String  | Custom prompt text for LLM                                            | OpenAI, Claude only |
+| `batch_size`  | Integer | Number of entries per completion call (default: 50)                  | OpenAI, Claude only |
 
 #### 📾 Sample Output
 
@@ -211,11 +218,11 @@ result = insight.extract(
 ```
 
 #### Available Options (`extract`)
-| Option             | Type    | Description                                                | Provider     |
-|--------------------|---------|------------------------------------------------------------|--------------|
-| `question`         | String  | Context question to help guide phrase extraction           | OpenAI only  |
-| `key_phrase_prompt`| String  | Custom prompt for extracting key phrases                   | OpenAI only  |
-| `sentiment_prompt` | String  | Custom prompt for classifying tone of extracted phrases    | OpenAI only  |
+| Option             | Type    | Description                                                | Provider           |
+|--------------------|---------|------------------------------------------------------------|--------------------|
+| `question`         | String  | Context question to help guide phrase extraction           | OpenAI, Claude only |
+| `key_phrase_prompt`| String  | Custom prompt for extracting key phrases                   | OpenAI, Claude only |
+| `sentiment_prompt` | String  | Custom prompt for classifying tone of extracted phrases    | OpenAI, Claude only |
 
 #### 📾 Sample Output
 
@@ -267,10 +274,10 @@ result = insight.extract(
 ```
 
 #### Available Options (`extract`)
-| Option      | Type    | Description                                       | Provider     |
-|-------------|---------|---------------------------------------------------|--------------|
-| `question`  | String  | Context question to guide entity extraction       | OpenAI only  |
-| `prompt`    | String  | Custom instructions for OpenAI entity extraction  | OpenAI only  |
+| Option      | Type    | Description                                       | Provider           |
+|-------------|---------|---------------------------------------------------|--------------------|
+| `question`  | String  | Context question to guide entity extraction       | OpenAI, Claude only |
+| `prompt`    | String  | Custom instructions for entity extraction         | OpenAI, Claude only |
 
 #### 📾 Sample Output
 
@@ -310,7 +317,7 @@ result = insight.extract(
 
 ## Provider Options & Custom Prompts
 
-> ⚠️ All advanced options (`question`, `prompt`, `key_phrase_prompt`, `sentiment_prompt`, `batch_size`) apply only to the `:openai` provider.  
+> ⚠️ All advanced options (`question`, `prompt`, `key_phrase_prompt`, `sentiment_prompt`, `batch_size`) apply only to the `:openai` and `:claude` providers.  
 > They are safely ignored for `:aws` and `:sentimental`.
 
 ---
@@ -321,6 +328,12 @@ result = insight.extract(
 
 ```bash
 OPENAI_API_KEY=your_openai_key_here
+```
+
+### Claude AI
+
+```bash
+CLAUDE_API_KEY=your_claude_key_here
 ```
 
 ### AWS Comprehend
@@ -373,6 +386,7 @@ Pull requests welcome! Please open an issue to discuss major changes first.
 ## 💬 Acknowledgements
 
 - [OpenAI GPT](https://platform.openai.com/docs)
+- [Claude AI](https://docs.anthropic.com/claude/reference/getting-started-with-the-api)
 - [AWS Comprehend](https://docs.aws.amazon.com/comprehend/latest/dg/what-is.html)
 - [Sentimental Gem](https://github.com/7compass/sentimental)
 

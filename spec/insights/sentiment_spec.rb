@@ -96,12 +96,18 @@ RSpec.describe SentimentInsights::Insights::Sentiment do
       before do
         # Stub client creations
         allow(SentimentInsights::Clients::Sentiment::OpenAIClient).to receive(:new).and_return(double('openai_client'))
+        allow(SentimentInsights::Clients::Sentiment::ClaudeClient).to receive(:new).and_return(double('claude_client'))
         allow(SentimentInsights::Clients::Sentiment::AwsComprehendClient).to receive(:new).and_return(double('aws_client'))
       end
 
       it 'creates instance with OpenAI client' do
         sentiment = described_class.new(provider: :openai)
         expect(SentimentInsights::Clients::Sentiment::OpenAIClient).to have_received(:new)
+      end
+
+      it 'creates instance with Claude client' do
+        sentiment = described_class.new(provider: :claude)
+        expect(SentimentInsights::Clients::Sentiment::ClaudeClient).to have_received(:new)
       end
 
       it 'creates instance with AWS Comprehend client' do
@@ -237,6 +243,50 @@ RSpec.describe SentimentInsights::Insights::Sentiment do
         # Negative comments in ascending order (most negative first)
         expect(result[:top_negative_comments][0][:score]).to be < result[:top_negative_comments][1][:score]
       end
+    end
+  end
+
+  context 'with mocked Claude provider' do
+    let(:mock_client) do
+      double('mock_claude_client').tap do |client|
+        allow(client).to receive(:analyze_entries) do |entries, question: nil, prompt: nil, batch_size: nil|
+          entries.map.with_index do |_, i|
+            { label: [:positive, :negative, :neutral][i % 3], score: [0.8, -0.7, 0.0][i % 3] }
+          end
+        end
+      end
+    end
+
+    subject { described_class.new(provider_client: mock_client) }
+    include_examples "valid sentiment summary"
+
+    it 'handles Claude API responses correctly' do
+      result = subject.analyze(entries)
+      
+      expect(result[:global_summary][:total_count]).to eq(3)
+      expect(result[:global_summary][:positive_count]).to eq(1)
+      expect(result[:global_summary][:negative_count]).to eq(1)
+      expect(result[:global_summary][:neutral_count]).to eq(1)
+      
+      # Check that scores are properly assigned
+      expect(result[:responses][0][:sentiment_score]).to eq(0.8)
+      expect(result[:responses][1][:sentiment_score]).to eq(-0.7)
+      expect(result[:responses][2][:sentiment_score]).to eq(0.0)
+    end
+
+    it 'passes custom options to Claude client' do
+      custom_question = "How satisfied are you?"
+      custom_prompt = "Analyze sentiment carefully"
+      custom_batch_size = 25
+
+      expect(mock_client).to receive(:analyze_entries).with(
+        entries,
+        question: custom_question,
+        prompt: custom_prompt,
+        batch_size: custom_batch_size
+      ).and_return(entries.map { { label: :positive, score: 0.8 } })
+
+      subject.analyze(entries, question: custom_question, prompt: custom_prompt, batch_size: custom_batch_size)
     end
   end
 

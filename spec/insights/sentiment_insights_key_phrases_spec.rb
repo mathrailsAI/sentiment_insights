@@ -95,6 +95,8 @@ RSpec.describe SentimentInsights::Insights::KeyPhrases do
         # Stub client creations
         allow(SentimentInsights::Clients::KeyPhrases::OpenAIClient).to receive(:new)
           .and_return(double('openai_client'))
+        allow(SentimentInsights::Clients::KeyPhrases::ClaudeClient).to receive(:new)
+          .and_return(double('claude_client'))
         allow(SentimentInsights::Clients::KeyPhrases::AwsClient).to receive(:new)
           .and_return(double('aws_client'))
       end
@@ -102,6 +104,11 @@ RSpec.describe SentimentInsights::Insights::KeyPhrases do
       it 'creates instance with OpenAI client' do
         expect(SentimentInsights::Clients::KeyPhrases::OpenAIClient).to receive(:new)
         described_class.new(provider: :openai)
+      end
+
+      it 'creates instance with Claude client' do
+        expect(SentimentInsights::Clients::KeyPhrases::ClaudeClient).to receive(:new)
+        described_class.new(provider: :claude)
       end
 
       it 'creates instance with AWS client' do
@@ -193,6 +200,71 @@ RSpec.describe SentimentInsights::Insights::KeyPhrases do
         expect(segment_dist[:region]["North"]).to eq(1)
         expect(segment_dist[:region]["East"]).to eq(1)
       end
+    end
+  end
+
+  context 'with mocked Claude provider' do
+    let(:mock_client) do
+      double('mock_claude_client').tap do |client|
+        allow(client).to receive(:extract_batch) do |entries, question: nil, key_phrase_prompt: nil, sentiment_prompt: nil|
+          {
+            responses: [
+              {
+                id: "r_1",
+                sentence: entries[0][:answer],
+                sentiment: :positive,
+                segment: entries[0][:segment]
+              },
+              {
+                id: "r_2",
+                sentence: entries[1][:answer],
+                sentiment: :negative,
+                segment: entries[1][:segment]
+              }
+            ],
+            phrases: [
+              {
+                phrase: "checkout experience",
+                mentions: ["r_1"]
+              },
+              {
+                phrase: "product quality",
+                mentions: ["r_2"]
+              },
+              {
+                phrase: "shopify interface",
+                mentions: ["r_1"]
+              }
+            ]
+          }
+        end
+      end
+    end
+
+    subject { described_class.new(provider_client: mock_client) }
+    include_examples "valid key phrases extraction"
+
+    it 'passes custom options to Claude client' do
+      custom_question = "What themes emerge?"
+      custom_key_phrase_prompt = "Extract themes: %{text}"
+      custom_sentiment_prompt = "Analyze mood: %{text}"
+
+      expect(mock_client).to receive(:extract_batch).with(
+        entries,
+        question: custom_question,
+        key_phrase_prompt: custom_key_phrase_prompt,
+        sentiment_prompt: custom_sentiment_prompt
+      ).and_return({
+        responses: [],
+        phrases: []
+      })
+
+      subject.extract(
+        entries,
+        question: custom_question,
+        key_phrase_prompt: custom_key_phrase_prompt,
+        sentiment_prompt: custom_sentiment_prompt
+      )
     end
   end
 
