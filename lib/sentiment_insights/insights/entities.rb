@@ -9,6 +9,9 @@ module SentimentInsights
                                               when :openai
                                                 require_relative '../clients/entities/open_ai_client'
                                                 Clients::Entities::OpenAIClient.new
+                                              when :claude
+                                                require_relative '../clients/entities/claude_client'
+                                                Clients::Entities::ClaudeClient.new
                                               when :aws
                                                 require_relative '../clients/entities/aws_client'
                                                 Clients::Entities::AwsClient.new

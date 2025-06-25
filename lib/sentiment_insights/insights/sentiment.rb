@@ -1,4 +1,5 @@
 require_relative '../clients/sentiment/open_ai_client'
+require_relative '../clients/sentiment/claude_client'
 require_relative '../clients/sentiment/sentimental_client'
 require_relative '../clients/sentiment/aws_comprehend_client'
 
@@ -15,6 +16,8 @@ module SentimentInsights
         @provider_client = provider_client || case effective_provider
                                               when :openai
                                                 Clients::Sentiment::OpenAIClient.new
+                                              when :claude
+                                                Clients::Sentiment::ClaudeClient.new
                                               when :aws
                                                 Clients::Sentiment::AwsComprehendClient.new
                                               else
