@@ -2,6 +2,7 @@ require_relative '../clients/sentiment/open_ai_client'
 require_relative '../clients/sentiment/claude_client'
 require_relative '../clients/sentiment/sentimental_client'
 require_relative '../clients/sentiment/aws_comprehend_client'
+require_relative '../export/exportable'
 
 module SentimentInsights
   module Insights
@@ -52,14 +53,14 @@ module SentimentInsights
 
         top_positive_comments, top_negative_comments = top_comments(annotated_responses)
 
-        # Assemble the result hash
-        {
+        # Assemble the result hash and wrap with export functionality
+        SentimentInsights::Export::Result.wrap({
           global_summary:       global_summary,
           segment_summary:      segment_summary,
           top_positive_comments: top_positive_comments,
           top_negative_comments: top_negative_comments,
           responses:            annotated_responses
-        }
+        })
       end
 
       private

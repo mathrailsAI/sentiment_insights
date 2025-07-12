@@ -1,6 +1,7 @@
 require_relative '../clients/key_phrases/open_ai_client'
 require_relative '../clients/key_phrases/claude_client'
 require_relative '../clients/key_phrases/aws_client'
+require_relative '../export/exportable'
 
 module SentimentInsights
   module Insights
@@ -73,10 +74,10 @@ module SentimentInsights
           }
         end
 
-        {
+        SentimentInsights::Export::Result.wrap({
           phrases: enriched_phrases,
           responses: responses
-        }
+        })
       end
     end
   end

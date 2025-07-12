@@ -1,6 +1,7 @@
 require "sentiment_insights/configuration"
 require "sentiment_insights/analyzer"
 require "sentiment_insights/insights/sentiment"
+require "sentiment_insights/export/exportable"
 
 module SentimentInsights
   class Error < StandardError; end

@@ -12,6 +12,7 @@
     - [Sentiment Analysis](#sentiment-analysis)
     - [Key Phrase Extraction](#key-phrase-extraction)
     - [Entity Extraction](#entity-extraction)
+- [Export & Output Formats](#export--output-formats)
 - [Provider Options & Custom Prompts](#provider-options--custom-prompts)
 - [Full Example](#full-example)
 - [Contributing](#contributing)
@@ -313,6 +314,87 @@ result = insight.extract(
          "the response was copy-paste and didn't address my issue directly.",
      :segment=>{:age=>"45-54", :region=>"Midwest"}}]}
 ```
+
+---
+
+## Export & Output Formats
+
+SentimentInsights provides flexible export options for all analysis results. Export to CSV, Excel, or JSON formats with advanced filtering and customization.
+
+### Quick Export Examples
+
+```ruby
+result = SentimentInsights::Insights::Sentiment.new.analyze(entries)
+
+# Direct format methods
+result.to_csv("analysis.csv")           # CSV file
+result.to_json("analysis.json")         # JSON file  
+result.to_excel("analysis.xlsx")        # Excel file
+
+# Auto-detect format from filename
+result.export("analysis.csv")           # Creates CSV
+result.export("analysis.json")          # Creates JSON
+result.export("analysis.xlsx")          # Creates Excel
+
+# API-friendly formats (no files)
+api_data = result.to_hash               # Structured Hash
+json_string = result.to_json_string     # JSON string
+```
+
+### Advanced Export Options
+
+```ruby
+# Filtered exports
+result.export_positive(:csv, "positive_feedback.csv")
+result.export_negative(:excel, "issues_to_address.xlsx")
+
+# Fluent interface with filtering
+result
+  .filter_sentiment(:positive)
+  .filter_segments(age_group: ["18-25", "26-35"])
+  .to_excel("young_positive_feedback.xlsx")
+
+# Export all formats at once
+files = result.export_all("comprehensive_analysis")
+# Returns: { csv: "file.csv", json: "file.json", excel: "file.xlsx" }
+```
+
+### CSV Export Structure
+
+```csv
+response_id,text,sentiment_label,sentiment_score,segment_age_group,segment_region,timestamp
+r_1,"I love this product!",positive,0.9,18-25,North,2024-06-28T10:30:00Z
+
+SUMMARY STATISTICS
+Total Responses,150
+Positive Percentage,60.0%
+Net Sentiment Score,40.0
+
+SEGMENT ANALYSIS
+Segment Type,Segment Value,Total Count,Positive %,Net Score
+Age Group,18-25,75,65.3%,49.3
+```
+
+### JSON Export Structure
+
+```json
+{
+  "metadata": {
+    "export_timestamp": "2024-06-28T10:30:00Z",
+    "analysis_type": "sentiment",
+    "total_responses": 150,
+    "provider_used": "claude"
+  },
+  "analysis": {
+    "responses": [...],
+    "global_summary": {...},
+    "segment_summary": {...}
+  }
+}
+```
+
+**📋 For complete export documentation, see [EXPORT_USAGE.md](EXPORT_USAGE.md)**
+
 ---
 
 ## Provider Options & Custom Prompts
@@ -365,8 +447,8 @@ bundle exec rspec
 - [x] Sentiment Analysis
 - [x] Key Phrase Extraction
 - [x] Entity Recognition
+- [x] Export Functionality (CSV, Excel, JSON)
 - [ ] Topic Modeling
-- [ ] CSV/JSON Export Helpers
 - [ ] Visual Dashboard Add-on
 
 ---
