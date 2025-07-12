@@ -31,6 +31,9 @@ Gem::Specification.new do |spec|
   # Runtime dependencies
   spec.add_dependency "sentimental", "~> 1.4.0"
   spec.add_dependency "aws-sdk-comprehend", ">= 1.98.0"
+  
+  # Export dependencies
+  spec.add_dependency "rubyXL", "~> 3.4"  # Excel export support
 
   # Development dependencies
   spec.add_development_dependency "bundler", "~> 2.0"

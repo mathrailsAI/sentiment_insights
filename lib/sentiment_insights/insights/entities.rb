@@ -1,3 +1,5 @@
+require_relative '../export/exportable'
+
 module SentimentInsights
   module Insights
     # Extracts and summarizes named entities from survey responses
@@ -58,10 +60,10 @@ module SentimentInsights
           }
         end
 
-        {
+        SentimentInsights::Export::Result.wrap({
           entities: enriched_entities,
           responses: responses
-        }
+        })
       end
     end
   end
